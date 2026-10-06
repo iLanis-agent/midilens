@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MidiLens - MIDI file inspector</title>
+<style>
+:root{--bg:#0d0f1a;--panel:#171a2c;--panel2:#1e2238;--fg:#e2e7fb;--dim:#8f97ba;--acc:#7c9bff;--ok:#3ecf8e;--warn:#ffb454;--bad:#ff6b6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;padding:22px}
+h1{margin:0 0 4px;font-size:26px}h1 .z{color:var(--acc)}.sub{color:var(--dim);max-width:840px;margin-bottom:16px}
+.panel{background:var(--panel);border:1px solid #2a3050;border-radius:10px;padding:14px 16px;margin-bottom:14px;max-width:1060px}
+#drop{border:2px dashed #39406b;border-radius:10px;padding:22px;text-align:center;color:var(--dim);cursor:pointer}
+#drop.over{border-color:var(--acc);color:var(--fg)}
+.presets{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}
+.presets button,#play,#stop{background:var(--panel2);color:var(--acc);border:1px solid #39406b;border-radius:6px;padding:5px 11px;cursor:pointer;font-size:13px}
+.presets button:hover,#play:hover{border-color:var(--acc)}
+.warbox{background:#2a2113;border:1px solid #6b5426;color:var(--warn);border-radius:8px;padding:8px 12px;margin:10px 0;max-width:1060px;font-size:13px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:6px 0}
+.kv .cell{background:var(--panel2);border-radius:8px;padding:8px 12px}
+.kv .k{color:var(--dim);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+.kv .v{font-size:16px;font-weight:600;margin-top:2px}
+#roll{width:100%;background:#0a0c16;border-radius:8px;border:1px solid #2a3050}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:4px 8px;text-align:left;border-bottom:1px solid #2a3050}
+th{color:var(--dim);font-size:11px;text-transform:uppercase}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+a{color:var(--acc)}.cap{color:var(--dim);font-size:12px}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11.5px;background:#26243a;color:var(--dim)}
+</style></head><body>
+<h1><span class="z">&#127926;</span> MidiLens</h1>
+<div class="sub">Drop a .mid and see what is really inside: every track and event, the tempo map, a piano roll of the notes - and play it back. All in your browser. Event-for-event verified against the mido library. <a href="index.html">About</a></div>
+<div class="panel">
+  <div id="drop">Drop a MIDI file here, or click to choose<input type="file" id="file" style="display:none"></div>
+  <div class="presets" id="presets"></div>
+</div>
+<div id="out" style="display:none">
+  <div id="warns"></div>
+  <div class="panel">
+    <div class="kv" id="stats"></div>
+    <div id="tempos" class="cap"></div>
+  </div>
+  <div class="panel">
+    <b>Piano roll</b> <span class="cap">(note range and time from parsed events; playback is a simple synth, not a reference renderer)</span><br><br>
+    <canvas id="roll" width="1020" height="240"></canvas>
+    <div style="margin-top:8px"><button id="play">&#9654; play</button> <button id="stop">&#9632; stop</button> <span class="cap" id="playstate"></span></div>
+  </div>
+  <div class="panel">
+    <b>Events</b> <span class="cap" id="evcap"></span>
+    <div style="max-height:340px;overflow:auto"><table id="tbl"><thead><tr><th>track</th><th>tick</th><th>event</th><th>details</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+<script src="engine.js?v=381"></script>
+<script>
+var PRESETS={"simple - 4 notes, 2 tracks": "TVRoZAAAAAYAAQACAeBNVHJrAAAACwD/UQMHoSAA/y8ATVRyawAAACsAwCgAkDxagXCAPAAAkEBagXCAQAAAkENagXCAQwAAkEhagXCASAAA/y8A", "format 0 single track": "TVRoZAAAAAYAAAABAeBNVHJrAAAAFAD/UQMGGoAAkEVkg2CARQAA/y8A", "tempo changes + drums": "TVRoZAAAAAYAAQACAeBNVHJrAAAAGwD/UQMHoSCDYP9RAwPQkINg/1EDD0JAAP8vAE1UcmsAAAAgAMAAAMkjAJA8UHiZJmR44FBPgXCAPACBcIkmAAD/LwA=", "running status (hand-crafted)": "TVRoZAAAAAYAAAABAeBNVHJrAAAAGwD/AwRUZXN0AJA8ZINgPmQAPADAAD4AAP8vAA==", "SMPTE division": "TVRoZAAAAAYAAAAB5yhNVHJrAAAAGwD/AwRUZXN0AJA8ZINgPmQAPADAAD4AAP8vAA=="};
+var CHC=['#7c9bff','#3ecf8e','#ffb454','#ff6b6b','#a879e8','#4fd6d6','#e8d44f','#ff9de2','#9dff70','#ff8a5c','#7ad0ff','#c9a0ff','#8ad0a0','#ffd07a','#f08aff','#a0b8ff'];
+var cur={bytes:null,res:null,notes:[]};
+var actx=null,oscNodes=[];
+function b64bytes(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
+Object.keys(PRESETS).forEach(function(k){
+  var b=document.createElement('button');b.textContent=k;
+  b.onclick=function(){load(b64bytes(PRESETS[k]),k);};
+  document.getElementById('presets').appendChild(b);
+});
+var drop=document.getElementById('drop'),file=document.getElementById('file');
+drop.onclick=function(){file.click();};
+file.onchange=function(){if(file.files[0])readFile(file.files[0]);};
+drop.ondragover=function(e){e.preventDefault();drop.classList.add('over');};
+drop.ondragleave=function(){drop.classList.remove('over');};
+drop.ondrop=function(e){e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0]);};
+function readFile(f){var r=new FileReader();r.onload=function(){load(new Uint8Array(r.result),f.name);};r.readAsArrayBuffer(f);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function load(bytes,name){
+  stopPlay();
+  var res=MidiLens.parseMidi(bytes);
+  cur.bytes=bytes;cur.res=res;
+  document.getElementById('out').style.display='block';
+  var w=document.getElementById('warns');w.innerHTML='';
+  res.errors.forEach(function(e){w.innerHTML+='<div class="warbox" style="background:#3a1620;border-color:#7a2c3c;color:#ff6b6b">'+esc(e)+'</div>';});
+  res.warnings.forEach(function(e){w.innerHTML+='<div class="warbox">'+esc(e)+'</div>';});
+  var div=res.tpq?res.tpq+' ticks/quarter':('SMPTE '+(res.smpte?res.smpte.fps+' fps x '+res.smpte.ticks_per_frame:''));
+  var cells=[['format',res.format],['tracks',res.tracks.length],['division',div],['duration',(res.duration_seconds!==null?res.duration_seconds.toFixed(2)+'s':'n/a')+' / '+res.max_tick+' ticks'],['notes',res.note_count],['pitch range',res.min_note!==null?res.min_note+' - '+res.max_note:'-'],['channels',res.channels_used.join(', ')||'-'],['programs',Object.keys(res.programs).map(function(c){return c+':'+res.programs[c];}).join(' ')||'-']];
+  document.getElementById('stats').innerHTML=cells.map(function(c){return '<div class="cell"><div class="k">'+c[0]+'</div><div class="v">'+c[1]+'</div></div>';}).join('');
+  document.getElementById('tempos').innerHTML=res.tempos.length?('tempo map: '+res.tempos.map(function(t){return 'tick '+t.tick+' = '+(60000000/t.tempo).toFixed(1)+' bpm';}).join(' &nbsp;|&nbsp; ')):'';
+  collectNotes(res);drawRoll(res);drawTable(res);
+}
+function collectNotes(res){
+  cur.notes=[];var open={};
+  res.tracks.forEach(function(tr){
+    tr.events.forEach(function(e){
+      if(e.type==='note_on'&&e.velocity>0){open[e.channel+':'+e.note]={tick:e.tick,vel:e.velocity,ch:e.channel,note:e.note};}
+      else if(e.type==='note_off'||(e.type==='note_on'&&e.velocity===0)){
+        var k=e.channel+':'+e.note;
+        if(open[k]){cur.notes.push({start:open[k].tick,end:e.tick,note:e.note,ch:e.channel,vel:open[k].vel});delete open[k];}
+      }
+    });
+  });
+}
+function drawRoll(res){
+  var cv=document.getElementById('roll'),g=cv.getContext('2d');
+  g.clearRect(0,0,cv.width,cv.height);
+  if(!cur.notes.length){g.fillStyle='#8f97ba';g.font='13px sans-serif';g.fillText('no notes in this file',16,30);return;}
+  var lo=res.min_note,hi=res.max_note,span=Math.max(1,hi-lo+1),maxT=Math.max(1,res.max_tick);
+  for(var n=lo;n<=hi;n++){
+    if(n%12===0){g.fillStyle='#2a3050';g.fillRect(40,(hi-n+0.5)*(cv.height-20)/span+10,cv.width-50,1);g.fillText('C'+(Math.floor(n/12)-1),6,(hi-n+0.5)*(cv.height-20)/span+14);}
+  }
+  cur.notes.forEach(function(nt){
+    var x=40+nt.start/maxT*(cv.width-56),x2=40+nt.end/maxT*(cv.width-56);
+    var y=(hi-nt.note)*(cv.height-20)/span+10,h=Math.max(3,(cv.height-20)/span-1);
+    g.fillStyle=CHC[nt.ch%16];g.globalAlpha=0.55+0.45*(nt.vel/127);
+    g.fillRect(x,y,Math.max(2,x2-x),h);
+  });
+  g.globalAlpha=1;
+}
+function drawTable(res){
+  var tb=document.querySelector('#tbl tbody');tb.innerHTML='';var shown=0,total=0;
+  res.tracks.forEach(function(tr){
+    tr.events.forEach(function(e){
+      total++;
+      if(shown<500){
+        shown++;
+        var tr2=document.createElement('tr');
+        var det=[];
+        ['channel','note','velocity','program','control','value','pitch','tempo','text','bytes'].forEach(function(k){if(e[k]!==undefined)det.push(k+'='+e[k]);});
+        if(e.time_signature)det.push(e.time_signature.join('/'));
+        tr2.innerHTML='<td>'+tr.index+'</td><td class="mono">'+e.tick+'</td><td>'+e.type+'</td><td class="mono">'+esc(det.join(' '))+'</td>';
+        tb.appendChild(tr2);
+      }
+    });
+  });
+  document.getElementById('evcap').textContent=total>500?'showing first 500 of '+total:total+' total';
+}
+function tickSec(res,tk){var s=0,last=0,cur=500000;for(var i=0;i<res.tempos.length;i++){if(res.tempos[i].tick>tk)break;s+=(res.tempos[i].tick-last)*cur/1e6/res.tpq;last=res.tempos[i].tick;cur=res.tempos[i].tempo;}s+=(tk-last)*cur/1e6/res.tpq;return s;}
+document.getElementById('play').onclick=function(){
+  if(!cur.res||!cur.res.tpq||!cur.notes.length)return;
+  stopPlay();
+  actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+  var t0=actx.currentTime+0.1,res=cur.res;
+  cur.notes.forEach(function(nt){
+    var st=t0+tickSec(res,nt.start),en=t0+tickSec(res,nt.end);
+    var o=actx.createOscillator(),g=actx.createGain();
+    o.type=nt.ch===9?'square':'triangle';
+    o.frequency.value=440*Math.pow(2,(nt.note-69)/12);
+    var v=(nt.vel/127)*0.22;
+    g.gain.setValueAtTime(0.0001,st);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001,v),st+0.02);
+    g.gain.setValueAtTime(Math.max(0.001,v),Math.max(st+0.02,en-0.03));
+    g.gain.exponentialRampToValueAtTime(0.0001,en+0.02);
+    o.connect(g);g.connect(actx.destination);
+    o.start(st);o.stop(en+0.05);
+    oscNodes.push(o);
+  });
+  document.getElementById('playstate').textContent='playing '+cur.notes.length+' notes ('+cur.res.duration_seconds.toFixed(1)+'s)';
+};
+function stopPlay(){oscNodes.forEach(function(o){try{o.stop();}catch(e){}});oscNodes=[];document.getElementById('playstate').textContent='';}
+document.getElementById('stop').onclick=stopPlay;
+</script></body></html>
