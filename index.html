@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MidiLens - about</title>
+<style>
+body{margin:0;background:#0d0f1a;color:#e2e7fb;font:15px/1.6 -apple-system,'Segoe UI',Roboto,sans-serif;padding:22px}
+main{max-width:760px;margin:0 auto}
+h1{font-size:26px;margin:0 0 4px}h1 .z{color:#7c9bff}
+a{color:#7c9bff}.card{background:#171a2c;border:1px solid #2a3050;border-radius:10px;padding:14px 18px;margin:14px 0}
+code{background:#1e2238;border-radius:4px;padding:1px 5px;font-size:13px}
+.big{display:inline-block;margin-top:8px;background:#7c9bff;color:#0d0f1a;font-weight:600;border-radius:8px;padding:10px 20px;text-decoration:none}
+.dim{color:#8f97ba}
+</style></head><body><main>
+<h1><span class="z">&#127926;</span> MidiLens</h1>
+<p class="dim">A Standard MIDI File inspector that runs entirely in your browser.</p>
+<div class="card">
+<b>What it shows</b>
+<ul>
+<li><b>Full structure</b> - format, track count, division (ticks-per-quarter or SMPTE), every track's every event with absolute ticks.</li>
+<li><b>Tempo map</b> - every tempo change merged across tracks, with tick-accurate seconds math.</li>
+<li><b>Stats</b> - duration in ticks and seconds, note count, pitch range, channels and programs in use.</li>
+<li><b>Piano roll</b> - notes drawn by channel with velocity shading.</li>
+<li><b>Playback</b> - a simple WebAudio synth renders the parsed note list. It is a proof of parse, not a reference renderer.</li>
+</ul>
+</div>
+<div class="card">
+<b>The parser handles the messy parts</b>
+<p>Variable-length quantities, running status, note-on-velocity-0 as note-off, tempo changes mid-file, SMPTE divisions (flagged), sysex, meta events, truncated files (reported, not crashed).</p>
+</div>
+<div class="card">
+<b>Why trust it</b>
+<p>Every parsed event is compared against the <code>mido</code> library - the oracle dumps each file event-for-event (tick, type, channel, note, velocity, tempo, text) and the runner checks them all, plus duration in seconds against <code>mido.length</code>, hand-verified running-status and SMPTE edge cases, and a truncated file that must produce an error. 175 checks, 0 failures.</p>
+</div>
+<div class="card"><b>Privacy</b><p>Your file never leaves the page. There is no server - this is a static site.</p></div>
+<a class="big" href="app.html">Open MidiLens &rarr;</a>
+<p class="dim" style="margin-top:18px">Built by the hourly app factory. <a href="https://github.com/iLanis-agent/midilens">Source on GitHub</a>.</p>
+</main></body></html>
