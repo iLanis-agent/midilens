@@ -1,0 +1,272 @@
+{
+ "items": [
+  {
+   "file": "simple.mid",
+   "format": 1,
+   "ticks_per_beat": 480,
+   "length_seconds": 1.0,
+   "tracks": [
+    [
+     {
+      "tick": 0,
+      "type": "set_tempo",
+      "tempo": 500000
+     },
+     {
+      "tick": 0,
+      "type": "end_of_track"
+     }
+    ],
+    [
+     {
+      "tick": 0,
+      "type": "program_change",
+      "channel": 0,
+      "program": 40
+     },
+     {
+      "tick": 0,
+      "type": "note_on",
+      "channel": 0,
+      "note": 60,
+      "velocity": 90
+     },
+     {
+      "tick": 240,
+      "type": "note_off",
+      "channel": 0,
+      "note": 60,
+      "velocity": 0
+     },
+     {
+      "tick": 240,
+      "type": "note_on",
+      "channel": 0,
+      "note": 64,
+      "velocity": 90
+     },
+     {
+      "tick": 480,
+      "type": "note_off",
+      "channel": 0,
+      "note": 64,
+      "velocity": 0
+     },
+     {
+      "tick": 480,
+      "type": "note_on",
+      "channel": 0,
+      "note": 67,
+      "velocity": 90
+     },
+     {
+      "tick": 720,
+      "type": "note_off",
+      "channel": 0,
+      "note": 67,
+      "velocity": 0
+     },
+     {
+      "tick": 720,
+      "type": "note_on",
+      "channel": 0,
+      "note": 72,
+      "velocity": 90
+     },
+     {
+      "tick": 960,
+      "type": "note_off",
+      "channel": 0,
+      "note": 72,
+      "velocity": 0
+     },
+     {
+      "tick": 960,
+      "type": "end_of_track"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "format0.mid",
+   "format": 0,
+   "ticks_per_beat": 480,
+   "length_seconds": 0.39999999999999997,
+   "tracks": [
+    [
+     {
+      "tick": 0,
+      "type": "set_tempo",
+      "tempo": 400000
+     },
+     {
+      "tick": 0,
+      "type": "note_on",
+      "channel": 0,
+      "note": 69,
+      "velocity": 100
+     },
+     {
+      "tick": 480,
+      "type": "note_off",
+      "channel": 0,
+      "note": 69,
+      "velocity": 0
+     },
+     {
+      "tick": 480,
+      "type": "end_of_track"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "tempochange.mid",
+   "format": 1,
+   "ticks_per_beat": 480,
+   "length_seconds": 0.75,
+   "tracks": [
+    [
+     {
+      "tick": 0,
+      "type": "set_tempo",
+      "tempo": 500000
+     },
+     {
+      "tick": 480,
+      "type": "set_tempo",
+      "tempo": 250000
+     },
+     {
+      "tick": 960,
+      "type": "set_tempo",
+      "tempo": 1000000
+     },
+     {
+      "tick": 960,
+      "type": "end_of_track"
+     }
+    ],
+    [
+     {
+      "tick": 0,
+      "type": "program_change",
+      "channel": 0,
+      "program": 0
+     },
+     {
+      "tick": 0,
+      "type": "program_change",
+      "channel": 9,
+      "program": 35
+     },
+     {
+      "tick": 0,
+      "type": "note_on",
+      "channel": 0,
+      "note": 60,
+      "velocity": 80
+     },
+     {
+      "tick": 120,
+      "type": "note_on",
+      "channel": 9,
+      "note": 38,
+      "velocity": 100
+     },
+     {
+      "tick": 240,
+      "type": "pitchwheel",
+      "channel": 0,
+      "pitch": 2000
+     },
+     {
+      "tick": 480,
+      "type": "note_off",
+      "channel": 0,
+      "note": 60,
+      "velocity": 0
+     },
+     {
+      "tick": 720,
+      "type": "note_off",
+      "channel": 9,
+      "note": 38,
+      "velocity": 0
+     },
+     {
+      "tick": 720,
+      "type": "end_of_track"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "running.mid",
+   "format": 0,
+   "ticks_per_beat": 480,
+   "hand": true,
+   "tracks": [
+    [
+     {
+      "tick": 0,
+      "type": "track_name",
+      "text": "Test"
+     },
+     {
+      "tick": 0,
+      "type": "note_on",
+      "channel": 0,
+      "note": 60,
+      "velocity": 100
+     },
+     {
+      "tick": 480,
+      "type": "note_on",
+      "channel": 0,
+      "note": 62,
+      "velocity": 100
+     },
+     {
+      "tick": 480,
+      "type": "note_on",
+      "channel": 0,
+      "note": 60,
+      "velocity": 0
+     },
+     {
+      "tick": 8672,
+      "type": "note_on",
+      "channel": 0,
+      "note": 62,
+      "velocity": 0
+     },
+     {
+      "tick": 8672,
+      "type": "end_of_track"
+     }
+    ]
+   ],
+   "note_count": 2,
+   "min_note": 60,
+   "max_note": 62
+  },
+  {
+   "file": "smpte.mid",
+   "format": 0,
+   "hand": true,
+   "smpte": {
+    "fps": -25,
+    "ticks_per_frame": 40
+   },
+   "expect_warnings": [
+    "SMPTE"
+   ]
+  },
+  {
+   "file": "bad_trunc.mid",
+   "hand": true,
+   "expect_error": true
+  }
+ ]
+}
